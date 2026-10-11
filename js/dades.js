@@ -920,7 +920,7 @@ RE({id:'rits_bases_srv', name:'Bases de corrent de servei',
  confusion:'El reglament demana com a mínim dues bases de servei a més de les de la capçalera.',
  links:['rits_quadre','rits_tub_elec']});
 RE({id:'rits_quadre', lid:true, name:'Quadre de protecció elèctrica del RITS',
- what:'Caixa amb tapa i carril DIN amb l\'interruptor general, el diferencial i els magnetotèrmics dels circuits del recinte, i un borne de terra.',
+ what:'Caixa amb tapa i carril DIN amb l\'interruptor general automàtic (IGA), el diferencial de 30 mA i els magnetotèrmics dels circuits del recinte, tots monofàsics de 2 mòduls (fase + neutre), i un borne de terra.',
  purpose:'Protegeix les persones i els circuits del recinte (enllumenat, bases de servei i capçalera) i permet tallar-los per separat.',
  where:'Paret dreta, a prop de la porta.',
  connects:'Arriba l\'alimentació elèctrica de l\'edifici per un tub des del terra. Surten els circuits d\'enllumenat, bases de servei i bases de la capçalera, cadascun pel seu tub. Té el borne de terra unit a l\'anell.',
