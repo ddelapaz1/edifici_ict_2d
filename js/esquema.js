@@ -443,6 +443,39 @@ function buildRS(f) {
   lab(1345, y(96), 'sangrat', 'lod3', {a: 'start', fs: 4.5, cls: 'muted'});
 }
 
+/* ---------- base d'accés terminal (BAT): placa frontal segons el tipus de presa ----------
+   Coordenades absolutes (sense transform, perquè getBBox() del grup inclogui el dibuix).
+   No es reflecteix al costat B: el TV queda sempre a l'esquerra del SAT. */
+function rj45(p, cx, cy, w) {                      // connector RJ45 vist de cara (w = amplada)
+  const k = w / 150, x0 = cx - 75 * k, y0 = cy - 72 * k, q = (x, y) => `${x0 + x * k},${y0 + y * k}`;
+  R(p, x0, y0, x0 + 150 * k, y0 + 144 * k, 'batjack', {rx: 20 * k});
+  mk('path', {d: 'M' + [[13, 14], [137, 14], [137, 88], [123, 88], [123, 110], [103, 110], [103, 123], [47, 123],
+    [47, 110], [27, 110], [27, 88], [13, 88]].map(([x, y]) => q(x, y)).join('L') + 'Z', class: 'batjin'}, p);
+  R(p, x0 + 25 * k, y0 + 24 * k, x0 + 125 * k, y0 + 46 * k, 'batpins');
+  for (let i = 1; i < 8; i++) mk('line', {x1: x0 + (25 + i * 12.5) * k, y1: y0 + 26 * k, x2: x0 + (25 + i * 12.5) * k, y2: y0 + 44 * k, class: 'batpin'}, p);
+}
+function coaxF(p, cx, cy, r, male) {                // presa coaxial: TV (pin, mascle) o SAT (forat, femella)
+  C(p, cx, cy, r, 'batjack');
+  if (male) C(p, cx, cy, r * 0.3, 'batpinf'); else C(p, cx, cy, r * 0.36, 'batjin');
+}
+function drawBAT(g, cx, yy, ty, dbl) {
+  R(g, cx - 9.5, yy + 1.5, cx + 9.5, yy + 16, 'bat', {rx: 2.6});
+  const cy = yy + 8.75;
+  if (ty === 'dat') {
+    if (dbl) { rj45(g, cx - 4.3, cy, 7.6); rj45(g, cx + 4.3, cy, 7.6); }
+    else rj45(g, cx, cy, 7.6);
+  } else if (ty === 'rtv') {
+    T(g, cx - 4.4, yy + 6.6, 'TV', 'battxt', {fs: 2.6}); T(g, cx + 4.4, yy + 6.6, 'SAT', 'battxt', {fs: 2.6});
+    coaxF(g, cx - 4.4, yy + 10.8, 2.7, true); coaxF(g, cx + 4.4, yy + 10.8, 2.7, false);
+  } else if (ty === 'tba') {
+    coaxF(g, cx - 4.4, cy, 2.7, true); coaxF(g, cx + 4.4, cy, 2.7, false);
+  } else if (ty === 'fo') {                         // adaptador SC/APC
+    R(g, cx - 3.4, cy - 3.6, cx + 3.4, cy + 3.6, 'batjack', {rx: 0.6});
+    mk('path', {d: `M${cx - 2.6},${cy - 2.5}H${cx - 0.9}V${cy - 3.2}H${cx + 0.9}V${cy - 2.5}H${cx + 2.6}V${cy + 2.8}H${cx - 2.6}Z`, class: 'batjin'}, g);
+    C(g, cx, cy + 0.2, 1.35, 'batjin'); C(g, cx, cy + 0.2, 0.6, 'batjin');
+  }
+}
+
 /* ---------- habitatge: accés, RTR i xarxa interior ---------- */
 const PRESES2D = {   // posició dels registres de presa: x (costat A) i passadís (b = per terra, t = per sostre)
   rtv_cuina: [728, 'b'], dat_cuina: [766, 'b'], rtv_d2: [480, 'b'], dat_d2: [560, 'b'],
@@ -518,9 +551,7 @@ function buildUnit(f, s) {
     const rp = G(LY.box, `rp_${k}_${U}`);
     const yy = t + rpY[c], ty = ptype(k);
     R(rp, X(x - 12), yy, X(x + 12), yy + 24, 'rp rp-' + ty, {rx: 2});
-    const bat = G(rp, `bat_${k}_${U}`), dbl = k === 'dat_sala' || k === 'dat_d1';
-    if (dbl) { R(bat, X(x - 8), yy + 6, X(x - 1), yy + 13, 'bat'); R(bat, X(x + 1), yy + 6, X(x + 8), yy + 13, 'bat'); }
-    else C(bat, X(x), yy + 10, 4.2, 'bat');
+    drawBAT(G(rp, `bat_${k}_${U}`), X(x), yy, ty, k === 'dat_sala' || k === 'dat_d1');
     T(rp, X(x), yy + 21, {rtv: 'RTV', dat: 'RJ45', tba: 'TBA', fo: 'FO'}[ty], 'modtxt', {fs: 4.4, fw: 700});
   }
   // cables interiors: [xarxa, tecnologia, port del PAU, registre]

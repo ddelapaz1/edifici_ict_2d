@@ -118,7 +118,13 @@ kbd{border:1px solid var(--bd);border-bottom-width:2px;border-radius:4px;padding
 .rtr{fill:#FFFFFF;stroke:#6A5F4E;stroke-width:1.5}
 .rp{fill:#FFFFFF;stroke:#9C8E76;stroke-width:.9}
 .rp-rtv{stroke:#C2185B}.rp-dat{stroke:#8D6E1F}.rp-tba{stroke:#7B1FA2}.rp-fo{stroke:#0AA5C2}
-.bat{fill:#F1EFEA;stroke:#55504A;stroke-width:.7}
+.bat{fill:#FFFFFF;stroke:#2C2C2B;stroke-width:.45}
+.batjack{fill:#FFFFFF;stroke:#33323A;stroke-width:.32}
+.batjin{fill:none;stroke:#33323A;stroke-width:.26}
+.batpins{fill:#FFFFFF;stroke:#33323A;stroke-width:.2}
+.batpin{stroke:#33323A;stroke-width:.16}
+.batpinf{fill:#8A817C;stroke:#33323A;stroke-width:.2}
+.battxt{fill:#2C2C2B;pointer-events:none}
 .device{fill:#3C4043;stroke:#1E2124;stroke-width:.6}
 .equip .modtxt{fill:#fff}
 .pau{fill:#EDEFF1;stroke:#6E7781;stroke-width:.9}

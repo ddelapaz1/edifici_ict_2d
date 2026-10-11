@@ -3,7 +3,6 @@
    - Dos habitatges per planta (A a l'esquerra i B a la dreta): fora C i D.
    - Derivadors de RTV de 2 sortides.
    - Canalització secundària directa del registre secundari al RTR (sense registre de pas).
-   - Vocabulari: «escomesa» en lloc d'«acometida».
    ===================================================================== */
 'use strict';
 (function () {
@@ -11,9 +10,7 @@
   const fix = t => t
     .replace(/(\d[a-z]{1,2}) A, \1 B, \1 C i \1 D/g, '$1 A i $1 B')
     .replace(/\(A, B, C i D\)/g, '(A i B)')
-    .replace(/quatre habitatges/g, 'dos habitatges')
-    .replace(/\bAcometid(a|es)\b/g, (m, s) => s === 'a' ? 'Escomesa' : 'Escomeses')
-    .replace(/\bacometid(a|es)\b/g, (m, s) => s === 'a' ? 'escomesa' : 'escomeses');
+    .replace(/quatre habitatges/g, 'dos habitatges');
   const ord = f => ORD[f], FN = f => FLOORNAME(f).toLowerCase();
 
   // 1. només els habitatges A i B
