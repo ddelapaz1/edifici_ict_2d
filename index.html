@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICT · Esquema 2D de l'edifici</title>
+<link rel="stylesheet" href="css/estils.css?v=4">
+</head>
+<body>
+<div class="app" id="app">
+ <header>
+  <h1>ICT · Esquema 2D de l'edifici<small>Infraestructura comuna de telecomunicacions (RD 346/2011) · clica un element per apropar-t'hi</small></h1>
+  <nav class="zones" aria-label="Zones de l'edifici">
+   <button data-zone="general" class="on">Vista general</button>
+   <button data-zone="rits">RITS</button>
+   <button data-zone="4">4a</button>
+   <button data-zone="3">3a</button>
+   <button data-zone="2">2a</button>
+   <button data-zone="1">1a</button>
+   <button data-zone="riti">RITI</button>
+  </nav>
+  <div class="seg" id="filter" role="group" aria-label="Filtra per servei">
+   <button data-svc="all" aria-pressed="true">Tots</button>
+   <button data-svc="rtv" aria-pressed="false">RTV</button>
+   <button data-svc="fo" aria-pressed="false">Fibra</button>
+   <button data-svc="pt" aria-pressed="false">Parells</button>
+  </div>
+  <div class="search">
+   <input id="q" type="search" placeholder="Cerca un element…" autocomplete="off" aria-label="Cerca un element">
+   <ul id="qres" role="listbox" hidden></ul>
+  </div>
+  <a class="link3d" href="../edifici_ict/index.html" title="Obre la versió 3D">Versió 3D ↗</a>
+ </header>
+ <main id="main">
+  <div id="stage">
+   <svg id="esq" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Esquema 2D de la ICT de l'edifici"></svg>
+   <div id="tip" role="tooltip"></div>
+   <div class="ctl" id="zoomctl">
+    <button id="zin" title="Apropa (+)" aria-label="Apropa">+</button>
+    <button id="zout" title="Allunya (−)" aria-label="Allunya">−</button>
+    <button id="zfit" title="Vista general (0)" aria-label="Vista general">⤢</button>
+    <button id="zback" title="Torna a la vista anterior" aria-label="Torna enrere" disabled>↶</button>
+   </div>
+   <div id="crumb" class="crumb" aria-live="polite"></div>
+   <details id="legend" open>
+    <summary>Llegenda</summary>
+    <ul>
+     <li><i class="sw" style="background:#0AA5C2"></i>Fibra òptica</li>
+     <li><i class="sw" style="background:#C2185B"></i>Cable coaxial (RTV, TBA)</li>
+     <li><i class="sw dash"></i>Coaxial de reserva (entrada carregada)</li>
+     <li><i class="sw" style="background:#8D6E1F;height:4px"></i>Parells de coure / trenats</li>
+     <li><i class="sw" style="background:#2B2B2B"></i>Coaxial exterior (antenes)</li>
+     <li><i class="sw tube"></i>Canalització (tubs)</li>
+     <li><i class="sq" style="background:#FBF6EC;border-color:#D9CBB0"></i>Zona privada (habitatge)</li>
+     <li><i class="sq" style="background:#EEF3F8;border-color:#C5D3E2"></i>Zona comuna</li>
+    </ul>
+    <p>Edifici de dos habitatges per planta: A a l'esquerra i B a la dreta del registre secundari.</p>
+   </details>
+  </div>
+  <aside id="panel" aria-label="Fitxa de l'element">
+   <div id="info"></div>
+  </aside>
+ </main>
+</div>
+<script src="js/dades.js?v=4"></script>
+<script src="js/dades2d.js?v=4"></script>
+<script src="js/esquema.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
+</body>
+</html>
