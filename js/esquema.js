@@ -91,6 +91,12 @@ function load(p, x, y, dir = 'down') {           // càrrega de 75 Ω (petit tap
   else { const s = dir === 'right' ? 1 : -1; mk('line', {x1: x, y1: y, x2: x + 5 * s, y2: y, class: 'loadstem'}, g); R(g, x + 5 * s, y - 2.6, x + 11 * s, y + 2.6, 'loadcap', {rx: 1}); }
   return g;
 }
+/* dibuixa amb totes les capes desplaçades (dx, dy): permet reutilitzar una peça en un altre lloc de l'esquema */
+function withShift(dx, dy, fn) {
+  const old = {...LY};
+  for (const k of Object.keys(LY)) if (k !== 'ovl') LY[k] = mk('g', {transform: `translate(${dx} ${dy})`}, old[k]);
+  try { return fn(); } finally { Object.assign(LY, old); }
+}
 /* etiquetes: lod0 = vista general (s'esvaeix en apropar-se), lod1/lod2/lod3 = apareixen en apropar-se */
 const lab = (x, y, s, lod, o = {}) => T(LY.lbl, x, y, s, 'lbl ' + lod + (o.cls ? ' ' + o.cls : ''), o);
 
@@ -104,7 +110,7 @@ function buildSchema(svg) {
   buildRoof();
   buildRITS();
   buildRiser();
-  for (const f of [4, 3, 2, 1]) { buildRS(f); buildUnit(f, 'A'); buildUnit(f, 'B'); }
+  for (const f of [4, 3, 2, 1]) { buildRS(f); for (const s of ['A', 'B']) { buildAccess(f, s); buildUnit(f, s); } }
   buildRITI();
 }
 
@@ -146,26 +152,34 @@ function buildFloorArch(f) {
   R(st, 880, b - 120, 990, b, null); mk('line', {x1: 880, y1: b - 120, x2: 990, y2: b}, st); mk('line', {x1: 990, y1: b - 120, x2: 880, y2: b}, st);
   lab(935, b - 126, 'Ascensor', 'lod1', {cls: 'muted', fs: 11});
   lab(1500, b - 120, 'Escala', 'lod1', {cls: 'muted', fs: 11});
-  for (const s of ['A', 'B']) {
-    const X = s === 'B' ? MX : (x => x);
+  for (const s of ['A', 'B']) buildUnitArch(f, s);
+}
+/* zona privada d'un habitatge (o = {mirror, door, win}) */
+function buildUnitArch(f, s, o = {}) {
+  const t = TOP(f), b = t + 424, m = o.mirror != null ? o.mirror : s === 'B';
+  {
+    const X = m ? MX : (x => x);
     R(LY.arch, X(164), t, X(800), b, 'private');
     R(LY.arch, X(800), t, X(814), b, 'wall');                              // mitgera amb el distribuïdor
     // envans interiors
     for (const [x1, y1, x2, y2] of [[420, 0, 426, 424], [640, 0, 646, 424], [426, 210, 640, 216], [646, 280, 800, 286]])
       R(LY.arch, X(x1), t + y1, X(x2), t + y2, 'partition');
     // portes (buit + fulla)
-    R(LY.arch, X(800), t + 236, X(814), t + 276, 'doorgap');               // entrada des del distribuïdor
-    mk('path', {d: `M${X(800)},${t + 236} A40,40 0 0 ${s === 'A' ? 0 : 1} ${X(760)},${t + 276} L${X(800)},${t + 276}`, class: 'doorleaf'}, LY.arch);
+    if (o.door !== false) {
+      R(LY.arch, X(800), t + 236, X(814), t + 276, 'doorgap');               // entrada des del distribuïdor
+      mk('path', {d: `M${X(800)},${t + 236} A40,40 0 0 ${m ? 1 : 0} ${X(760)},${t + 276} L${X(800)},${t + 276}`, class: 'doorleaf'}, LY.arch);
+    }
     R(LY.arch, X(640), t + 150, X(646), t + 196, 'doorgap');
     R(LY.arch, X(420), t + 60, X(426), t + 106, 'doorgap');
     R(LY.arch, X(420), t + 290, X(426), t + 336, 'doorgap');
     R(LY.arch, X(700), t + 280, X(746), t + 286, 'doorgap');
     // finestres a la façana
-    for (const y of [70, 290]) R(LY.arch, X(150), t + y, X(164), t + y + 70, 'window');
+    if (o.win !== false) for (const y of [70, 290]) R(LY.arch, X(150), t + y, X(164), t + y + 70, 'window');
     const U = `${f}${s}`;
     const rooms = [['Sala d\'estar', 292, 26], ['Dormitori 1', 533, 190], ['Dormitori 2', 533, 238], ['Rebedor', 715, 26], ['Cuina', 723, 306]];
     for (const [n, x, y] of rooms) lab(X(x), t + y, n, 'lod1', {cls: 'room', fs: 12});
-    lab(X(292), t + 210, `Habitatge\n${UNIT(U).name}`, 'lod0 big', {fs: 44, fw: 700});
+    const tt = unitTitle(UNIT(U));
+    lab(X(292), t + 210, tt.length > 10 ? tt.replace(' ', '\n') : tt, 'lod0 big', {fs: 44, fw: 700});
   }
 }
 
@@ -181,9 +195,9 @@ function buildGroundArch() {
 }
 
 /* ---------- coberta: torre, antenes i enllaç superior ---------- */
-function buildRoof() {
+function buildRoof(o = {}) {
   const roof = 700;
-  R(LY.arch, 140, roof - 30, 150, roof, 'wall'); R(LY.arch, 2250, roof - 30, 2260, roof, 'wall');   // ampits
+  if (o.parapet !== false) { R(LY.arch, 140, roof - 30, 150, roof, 'wall'); R(LY.arch, 2250, roof - 30, 2260, roof, 'wall'); }   // ampits
   // torreta de gelosia triangular de 175 mm de costat (tram de base de 2,5 m + tram superior d'1,5 m amb punta)
   const L = 447, Rr = 473, cx = 460, tip = 172;
   const tw = G(LY.box, 'torre', 'metal');
@@ -270,17 +284,18 @@ function buildRoof() {
 
 /* ---------- RITS: recinte i capçalera (variant de monocanals T12) ---------- */
 const MOD = [];                                  // mòduls T12 de la capçalera: {id, x, label, ch, kind}
-function buildRITS() {
-  const x1 = 740, x2 = 1660, y1 = 400, y2 = 700;
+function buildRITS(o = {}) {
+  const x1 = 740, x2 = o.x2 || 1660, y1 = 400, y2 = 700, xr = x2 - 1660;   // xr: ampliació (paret dreta)
   const rits = G(LY.box, 'rits', 'zone');
   R(rits, x1, y1, x2, y2, 'room-rits');
   R(rits, x1, y1, x2, y1 + 12, 'wall'); R(rits, x1, y1, x1 + 12, y2, 'wall'); R(rits, x2 - 12, y1, x2, y2, 'wall');
-  lab(1200, 386, 'RITS · Recinte d\'instal·lacions de telecomunicació superior', 'lod1', {fs: 15, fw: 700});
-  lab(1200, 560, 'RITS', 'lod0 big', {fs: 70, fw: 800});
+  const nom = o.name || 'RITS', cx = (x1 + x2) / 2;
+  lab(cx, 386, `${nom} · Recinte d'instal·lacions de telecomunicació ${o.name ? 'únic' : 'superior'}`, 'lod1', {fs: 15, fw: 700});
+  lab(cx, 560, nom, 'lod0 big', {fs: 70, fw: 800});
   // porta, placa, ventilació
-  const pt = G(rits, 'rits_porta'); R(pt, x2 - 12, 590, x2, 700, 'doorgap'); mk('path', {d: `M${x2},590 A110,110 0 0 1 ${x2 - 110},700`, class: 'doorleaf'}, pt);
+  const pt = G(rits, 'rits_porta'); R(pt, x2 - 12, 590, x2, 700, 'doorgap'); mk('path', {d: o.doorOut ? `M${x2},590 A110,110 0 0 0 ${x2 + 110},700` : `M${x2},590 A110,110 0 0 1 ${x2 - 110},700`, class: 'doorleaf'}, pt);
   R(pt, x2 - 12, 590, x2 - 4, 700, 'doormetal');
-  const pl = G(rits, 'rits_placa'); R(pl, x2 + 4, 610, x2 + 40, 632, 'sign', {rx: 2}); T(pl, x2 + 22, 624, 'RITS', 'tiny', {fs: 7});
+  const pl = G(rits, 'rits_placa'); R(pl, x2 + 4, 610, x2 + 40, 632, 'sign', {rx: 2}); T(pl, x2 + 22, 624, nom, 'tiny', {fs: 7});
   const vt = G(rits, 'rits_vent');
   for (const [vx, vy] of [[x1, 430], [x2 - 12, 440]]) { R(vt, vx, vy, vx + 12, vy + 40, 'vent'); for (let i = 1; i < 6; i++) mk('line', {x1: vx + 2, y1: vy + i * 6.6, x2: vx + 10, y2: vy + i * 6.6, class: 'ventl'}, vt); }
   // safata perimetral
@@ -288,14 +303,14 @@ function buildRITS() {
   lab(1000, 411, 'Safata perimetral', 'lod2', {fs: 7});
   // instal·lació elèctrica
   const te = G(rits, 'rits_tub_elec');
-  for (const d of [`M1620,440 V428 H1200 V430`, `M1200,428 H776 V494`, `M1625,530 V560`]) mk('path', {d, class: 'elec'}, te);
+  for (const d of [`M${1620 + xr},440 V428 H1200 V430`, `M1200,428 H776 V494`, `M${1625 + xr},530 V560`]) mk('path', {d, class: 'elec'}, te);
   const ll = G(rits, 'rits_llum'); R(ll, 1170, 430, 1230, 438, 'lamp', {rx: 3}); lab(1200, 448, 'Lluminària', 'lod2', {fs: 7});
-  const em = G(rits, 'rits_emerg'); R(em, 1560, 428, 1590, 438, 'emerg', {rx: 2}); lab(1575, 448, 'Emergència', 'lod2', {fs: 7});
-  const qd = G(rits, 'rits_quadre'); R(qd, 1598, 440, 1644, 530, 'panel', {rx: 2});
-  for (let i = 0; i < 4; i++) R(qd, 1604 + i * 9.5, 470, 1611 + i * 9.5, 490, 'breaker');
-  T(qd, 1621, 458, 'Quadre', 'tiny', {fs: 7}); lab(1621, 545, 'Quadre de protecció', 'lod2', {fs: 7});
-  const bs = G(rits, 'rits_bases_srv'); for (const y of [562, 584]) { R(bs, 1612, y, 1640, y + 18, 'socket', {rx: 2}); C(bs, 1622, y + 9, 1.4, 'sockh'); C(bs, 1630, y + 9, 1.4, 'sockh'); }
-  lab(1590, 606, 'Bases de servei', 'lod2', {a: 'end', fs: 7});
+  const em = G(rits, 'rits_emerg'); R(em, 1560 + xr, 428, 1590 + xr, 438, 'emerg', {rx: 2}); lab(1575 + xr, 448, 'Emergència', 'lod2', {fs: 7});
+  const qx = 1598 + xr, qd = G(rits, 'rits_quadre'); R(qd, qx, 440, qx + 46, 530, 'panel', {rx: 2});
+  for (let i = 0; i < 4; i++) R(qd, qx + 6 + i * 9.5, 470, qx + 13 + i * 9.5, 490, 'breaker');
+  T(qd, qx + 23, 458, 'Quadre', 'tiny', {fs: 7}); lab(qx + 23, 545, 'Quadre de protecció', 'lod2', {fs: 7});
+  const bs = G(rits, 'rits_bases_srv'); for (const y of [562, 584]) { R(bs, qx + 14, y, qx + 42, y + 18, 'socket', {rx: 2}); C(bs, qx + 24, y + 9, 1.4, 'sockh'); C(bs, qx + 32, y + 9, 1.4, 'sockh'); }
+  lab(qx - 8, 606, 'Bases de servei', 'lod2', {a: 'end', fs: 7});
   const bc = G(rits, 'rits_bases_cap'); for (const y of [494, 516]) { R(bc, 756, y, 784, y + 18, 'socket', {rx: 2}); C(bc, 766, y + 9, 1.4, 'sockh'); C(bc, 774, y + 9, 1.4, 'sockh'); }
   lab(770, 546, 'Bases capçalera', 'lod2', {fs: 7});
   const tr = G(rits, 'rits_terra'); R(tr, 790, 682, 880, 690, 'earthbar', {rx: 1});
@@ -482,21 +497,37 @@ const PRESES2D = {   // posició dels registres de presa: x (costat A) i passad�
   dat2_sala: [200, 'b'], tba_sala: [246, 'b'], rtv_sala: [292, 'b'], dat_sala: [342, 'b'], fo_sala: [388, 'b'],
   rtv_d1: [462, 't'], dat_d1: [512, 't'], dat2_d1: [562, 't'], tba_d1: [606, 't']
 };
-function buildUnit(f, s) {
-  const U = `${f}${s}`, t = TOP(f), m = s === 'B';
-  const X = m ? MX : (x => x), P = ([x, d]) => [X(x), t + d];
-  const side = m ? 'd' : 'e';
+/* accés a l'habitatge de l'edifici: canalització secundària i xarxa de dispersió des del registre secundari */
+function buildAccess(f, s) {
+  const U = `${f}${s}`, t = TOP(f), m = s === 'B', X = m ? MX : (x => x);
   // canalització secundària (4 × Ø25: RTV, fibra, parells, TBA) del registre secundari al RTR
   tubes(LY.canal, `cs_${U}`, X(790), t + 128, X(1030), t + 192, 4);
   mk('line', {x1: X(790), y1: t + 184, x2: X(1030), y2: t + 184, class: 'guide'}, LY.canal);
   lab(X(910), t + 122, 'Canalització secundària (4 × Ø25)', 'lod2', {fs: 6.5});
   lab(X(910), t + 202, 'RTV · fibra · parells · TBA (fil guia)', 'lod3', {fs: 4.2, cls: 'muted'});
+  // xarxa de dispersió: des del registre secundari fins als PAU
+  const tapX = (der, k) => (der === 1 ? 1080 : 1140) + (k === 'A' ? -20 : 20);
+  if (!m) {
+    cable(`xs_rtv_${U}`, [[[tapX(1, 'A'), t + 100], [tapX(1, 'A'), t + 131], [762, t + 131], [762, t + 127]]], 'coax');
+    cable(`xs_rtv_${U}`, [[[tapX(2, 'A'), t + 100], [tapX(2, 'A'), t + 139], [752, t + 139], [752, t + 127]]], 'coax', {dash: '4 2', cls: 'reserva'});
+    cable(`xs_fo_${U}`, [[1198, t + 104], [1198, t + 150], [720 + 50, t + 150]], 'fo', {w: 1.5});
+    cable(`xs_pt_${U}`, [[1288, t + 118], [1288, t + 166], [776, t + 166], [776, t + 185], [770, t + 185]], 'pt', {w: 1.6});
+  } else {
+    cable(`xs_rtv_${U}`, [[[tapX(2, 'B'), t + 100], [tapX(2, 'B'), t + 135], [1534, t + 135], [1540, t + 131], [MX(762), t + 131], [MX(762), t + 127]]], 'coax');
+    cable(`xs_rtv_${U}`, [[[tapX(1, 'B'), t + 100], [tapX(1, 'B'), t + 142], [1530, t + 142], [1536, t + 139], [MX(752), t + 139], [MX(752), t + 127]]], 'coax', {dash: '4 2', cls: 'reserva'});
+    cable(`xs_fo_${U}`, [[1232, t + 104], [1232, t + 154], [1528, t + 154], [1534, t + 150], [MX(770), t + 150]], 'fo', {w: 1.5});
+    cable(`xs_pt_${U}`, [[1312, t + 118], [1312, t + 170], [MX(776), t + 170], [MX(776), t + 185], [MX(770), t + 185]], 'pt', {w: 1.6});
+  }
+}
+/* habitatge: RTR, xarxa interior i equips (mirror: reflectit, amb el RTR a l'esquerra) */
+function buildUnit(f, s, mirror = s === 'B') {
+  const U = `${f}${s}`, t = TOP(f), m = mirror;
+  const X = m ? MX : (x => x), P = ([x, d]) => [X(x), t + d];
   // RTR
   const rtr = G(LY.box, `rtr_${U}`, 'zone');
   R(rtr, X(690), t + 100, X(790), t + 232, 'rtr', {rx: 4});
   lab(X(740), t + 94, 'Registre de terminació de xarxa (RTR)', 'lod2', {fs: 6.5, fw: 700});
   lab(X(740), t + 175, 'RTR', 'lod0 big', {fs: 40, fw: 800});
-  const a = m ? 'end' : 'start';
   // PAU de RTV (2 entrades, una carregada; 4 sortides)
   const pr = G(rtr, `pau_rtv_${U}`); R(pr, X(706), t + 106, X(770), t + 127, 'pau', {rx: 2});
   T(pr, X(732), t + 115, 'PAU RTV', 'modtxt', {fs: 5.5, fw: 700}); T(pr, X(732), t + 121.5, '2E · 4S', 'modtxt', {fs: 3.8});
@@ -520,19 +551,6 @@ function buildUnit(f, s) {
   const rc = G(LY.box, `rconf_${U}`); R(rc, X(748), t + 42, X(782), t + 70, 'rp', {rx: 2});
   T(rc, X(765), t + 59, 'conf.', 'modtxt', {fs: 5});
   lab(X(765), t + 36, 'Registre configurable', 'lod3', {fs: 4.5});
-  // xarxa de dispersió: des del registre secundari fins als PAU
-  const tapX = (der, k) => (der === 1 ? 1080 : 1140) + (k === 'A' ? -20 : 20);
-  if (!m) {
-    cable(`xs_rtv_${U}`, [[[tapX(1, 'A'), t + 100], [tapX(1, 'A'), t + 131], [762, t + 131], [762, t + 127]]], 'coax');
-    cable(`xs_rtv_${U}`, [[[tapX(2, 'A'), t + 100], [tapX(2, 'A'), t + 139], [752, t + 139], [752, t + 127]]], 'coax', {dash: '4 2', cls: 'reserva'});
-    cable(`xs_fo_${U}`, [[1198, t + 104], [1198, t + 150], [720 + 50, t + 150]], 'fo', {w: 1.5});
-    cable(`xs_pt_${U}`, [[1288, t + 118], [1288, t + 166], [776, t + 166], [776, t + 185], [770, t + 185]], 'pt', {w: 1.6});
-  } else {
-    cable(`xs_rtv_${U}`, [[[tapX(2, 'B'), t + 100], [tapX(2, 'B'), t + 135], [1534, t + 135], [1540, t + 131], [MX(762), t + 131], [MX(762), t + 127]]], 'coax');
-    cable(`xs_rtv_${U}`, [[[tapX(1, 'B'), t + 100], [tapX(1, 'B'), t + 142], [1530, t + 142], [1536, t + 139], [MX(752), t + 139], [MX(752), t + 127]]], 'coax', {dash: '4 2', cls: 'reserva'});
-    cable(`xs_fo_${U}`, [[1232, t + 104], [1232, t + 154], [1528, t + 154], [1534, t + 150], [MX(770), t + 150]], 'fo', {w: 1.5});
-    cable(`xs_pt_${U}`, [[1312, t + 118], [1312, t + 170], [MX(776), t + 170], [MX(776), t + 185], [MX(770), t + 185]], 'pt', {w: 1.6});
-  }
   // canalització interior (tubs en estrella, per terra i per sostre)
   const ci = `ci_${U}`;
   tubes(LY.canal, ci, X(180), t + 388, X(690), t + 422, 1, {cls: 'ci'});
@@ -591,6 +609,11 @@ function buildRITI() {
   R(riti, x1, y1, x2, y1 + 10, 'wall'); R(riti, x1, y1, x1 + 10, y2, 'wall'); R(riti, x2 - 10, y1, x2, y2, 'wall');
   lab(1200, y1 - 10, 'RITI · Recinte d\'instal·lacions de telecomunicació inferior', 'lod1', {fs: 15, fw: 700});
   lab(1200, y1 + 200, 'RITI', 'lod0 big', {fs: 70, fw: 800});
+  buildMainRegs(riti, t);
+  buildEntry(t);
+}
+/* registres principals òptic i de parells (punts d'interconnexió), amb la caixa a partir de t + 168 */
+function buildMainRegs(riti, t) {
   // registre principal òptic
   const rf = G(riti, 'rp_fo'); R(rf, 1000, t + 168, 1160, t + 370, 'cabinet', {rx: 3});
   lab(1080, t + 162, 'Registre principal òptic', 'lod2', {fs: 8, fw: 700});
@@ -612,6 +635,8 @@ function buildRITI() {
   T(pp, 1282, t + 206, 'Regletes entrada', 'modtxt', {fs: 5.5}); T(pp, 1358, t + 206, 'Regletes sortida', 'modtxt', {fs: 5.5});
   for (let i = 0; i < 5; i++) T(pp, 1388, t + 225 + i * 24, i < 4 ? `${ORD[i + 1]}` : 'res.', 'modtxt', {fs: 4, a: 'start'});
   lab(1320, t + 186, 'Punt d\'interconnexió de parells', 'lod3', {fs: 5.5});
+}
+function buildEntry(t) {
   // canalització externa, PEG, enllaç inferior
   const ark = G(LY.box, 'arqueta'); R(ark, 30, GROUND + 26, 120, GROUND + 96, 'arqueta', {rx: 2}); R(ark, 26, GROUND - 2, 124, GROUND + 6, 'lid');
   lab(75, GROUND + 112, 'Arqueta d\'entrada', 'lod1', {fs: 12});
@@ -633,3 +658,32 @@ function buildRITI() {
   cable('xd_fo', [[1118, t + 210], [1118, t + 168]], 'fo', {w: 2});
   cable('xd_pt', [[1358, t + 214], [1358, t + 168]], 'pt', {w: 3.2});
 }
+
+/* ---------- paràmetres de la vista (app.js): js/esquema-cases.js els substitueix ---------- */
+const VIEW2D = {
+  bounds: {x: -80, y: -330, w: 2560, h: 3410},
+  zones: ['rits', 'riti', 'rs_1', 'rs_2', 'rs_3', 'rs_4', ...UNITS.map(u => 'rtr_' + u.id)],
+  crumb(cx, cy) {                                  // zona on cau el centre de la vista
+    if (cy < 700) return '<b>Coberta</b> · RITS, torreta i antenes';
+    if (cy > TOP(0) - 10) return '<b>Planta baixa</b> · RITI i enllaç inferior';
+    const f = 4 - Math.floor((cy - 700) / 440);
+    const zone = cx < 814 ? `habitatge ${ORD[f]} A (zona privada)` : cx > 1586 ? `habitatge ${ORD[f]} B (zona privada)` : 'distribuïdor (zona comuna)';
+    return `<b>${FLOORNAME(f)}</b> · ${zone}`;
+  },
+  zone(z) {                                        // botons de zona de la capçalera
+    if (z === 'rits') return {x: 150, y: -320, w: 1560, h: 1040};
+    if (z === 'riti') return {x: -80, y: TOP(0) + 80, w: 1560, h: GROUND + 150 - TOP(0) - 80};
+    return {x: 150, y: FT(+z), w: 2100, h: 440};
+  },
+  intro: `<div class="card"><h2>Esquema 2D de la ICT</h2>
+   <p class="small">Secció vertical d'un edifici de quatre plantes. A baix, el <b>RITI</b> amb l'entrada dels operadors; a dalt, el <b>RITS</b> amb la capçalera de RTV i les antenes. A cada planta, el <b>registre secundari</b> del distribuïdor comú i, a banda i banda, un habitatge amb el seu <b>registre de terminació de xarxa</b> (RTR) i la xarxa interior.</p>
+   <p class="small"><b>Clica</b> un recinte o un registre per apropar-t'hi; un cop a dins, clica'n els equips, els cables o els tubs per veure'n la fitxa. També pots fer servir la roda del ratolí (o pessigar), arrossegar, <kbd>+</kbd> <kbd>−</kbd>, <kbd>0</kbd> (vista general) i <kbd>Esc</kbd>.</p>
+   <div class="zonebtns">
+    <button data-goto="rits">▣ RITS (coberta)</button><button data-goto="riti">▣ RITI (planta baixa)</button>
+    <button data-goto="rs_3">▣ Registre secundari</button><button data-goto="rtr_3A">▣ RTR d'un habitatge</button>
+    <button data-goto="capcalera">● Capçalera de RTV</button><button data-goto="canal_principal">◯ Canalització principal</button>
+   </div></div>
+   <div class="card small"><b>Recorregut del senyal</b>
+    <p style="margin:4px 0 0">Antenes → RITS (capçalera) → <span style="color:#C2185B">distribució coaxial</span> → derivadors del registre secundari → <span style="color:#C2185B">dispersió</span> → PAU del RTR → xarxa interior → presa (BAT).</p>
+    <p style="margin:4px 0 0">Operadors → arqueta → PEG → RITI (punts d'interconnexió) → <span style="color:#0AA5C2">fibra</span> i <span style="color:#8D6E1F">parells</span> cap amunt → registre secundari → RTR.</p></div>`
+};

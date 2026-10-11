@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ca" data-model="cases">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICT · Esquema 2D de les cases adossades</title>
+<link rel="stylesheet" href="css/estils.css?v=8">
+</head>
+<body>
+<div class="app" id="app">
+ <header>
+  <h1>ICT · Esquema 2D de les cases adossades<small>Infraestructura comuna de telecomunicacions (RD 346/2011) · clica un element per apropar-t'hi</small></h1>
+  <nav class="seg model" aria-label="Model">
+   <a href="index.html" title="Edifici plurifamiliar: RITI a la planta baixa i RITS a la coberta">Edifici</a>
+   <a href="cases.html" aria-current="page" title="Conjunt de cases adossades amb un recinte únic (RITU)">Cases adossades</a>
+  </nav>
+  <nav class="zones" aria-label="Zones del conjunt">
+   <button data-zone="general" class="on">Vista general</button>
+   <button data-zone="ritu">RITU</button>
+   <button data-zone="soterrani">Soterrani</button>
+   <button data-zone="0A">Casa 1</button>
+   <button data-zone="0D">Casa 2</button>
+   <button data-zone="0C">Casa 3</button>
+   <button data-zone="0B">Casa 4</button>
+  </nav>
+  <div class="seg" id="filter" role="group" aria-label="Filtra per servei">
+   <button data-svc="all" aria-pressed="true">Tots</button>
+   <button data-svc="rtv" aria-pressed="false">RTV</button>
+   <button data-svc="fo" aria-pressed="false">Fibra</button>
+   <button data-svc="pt" aria-pressed="false">Parells</button>
+  </div>
+  <div class="search">
+   <input id="q" type="search" placeholder="Cerca un element…" autocomplete="off" aria-label="Cerca un element">
+   <ul id="qres" role="listbox" hidden></ul>
+  </div>
+  <a class="link3d" href="../edifici_ict/cases.html" title="Obre la versió 3D de les cases adossades">Versió 3D ↗</a>
+ </header>
+ <main id="main">
+  <div id="stage">
+   <svg id="esq" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Esquema 2D de la ICT del conjunt de cases adossades"></svg>
+   <div id="tip" role="tooltip"></div>
+   <div class="ctl" id="zoomctl">
+    <button id="zin" title="Apropa (+)" aria-label="Apropa">+</button>
+    <button id="zout" title="Allunya (−)" aria-label="Allunya">−</button>
+    <button id="zfit" title="Vista general (0)" aria-label="Vista general">⤢</button>
+    <button id="zback" title="Torna a la vista anterior" aria-label="Torna enrere" disabled>↶</button>
+   </div>
+   <div id="crumb" class="crumb" aria-live="polite"></div>
+   <details id="legend" open>
+    <summary>Llegenda</summary>
+    <ul>
+     <li><i class="sw" style="background:#0AA5C2"></i>Fibra òptica</li>
+     <li><i class="sw" style="background:#C2185B"></i>Cable coaxial (RTV, TBA)</li>
+     <li><i class="sw dash"></i>Coaxial de reserva (entrada carregada)</li>
+     <li><i class="sw" style="background:#8D6E1F;height:4px"></i>Parells de coure / trenats</li>
+     <li><i class="sw" style="background:#2B2B2B"></i>Coaxial exterior (antenes)</li>
+     <li><i class="sw tube"></i>Canalització (tubs)</li>
+     <li><i class="sq" style="background:#FBF6EC;border-color:#D9CBB0"></i>Zona privada (habitatge)</li>
+     <li><i class="sq" style="background:#EEF3F8;border-color:#C5D3E2"></i>Zona comuna</li>
+    </ul>
+    <p>Quatre cases adossades: cada parella comparteix un registre secundari, al soterrani, sota la mitgera.</p>
+   </details>
+  </div>
+  <aside id="panel" aria-label="Fitxa de l'element">
+   <div id="info"></div>
+  </aside>
+ </main>
+</div>
+<script src="js/dades.js?v=8"></script>
+<script src="js/dades-cases.js?v=8"></script>
+<script src="js/esquema.js?v=8"></script>
+<script src="js/esquema-cases.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+</body>
+</html>

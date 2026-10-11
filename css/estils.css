@@ -23,6 +23,10 @@ header h1 small{display:block;font-weight:400;color:var(--tx2);font-size:.75rem}
 #qres li small{color:var(--tx2);display:block}
 .link3d{font-size:.84rem;color:#1A5FB4;text-decoration:none;border:1px solid #BFD3EE;border-radius:8px;padding:6px 10px;white-space:nowrap}
 .link3d:hover{background:var(--blueS)}
+.seg.model a{display:flex;align-items:center;padding:4px 9px;min-height:34px;text-decoration:none;color:inherit;border-right:1px solid var(--bd);white-space:nowrap;font-size:.84rem;background:var(--bg)}
+.seg.model a:last-child{border-right:0}
+.seg.model a:hover{background:var(--sec)}
+.seg.model a[aria-current="page"]{background:#1F3A5F;color:#fff;font-weight:600}
 main{flex:1;display:flex;min-height:0}
 #stage{position:relative;flex:1;min-width:0;overflow:hidden;background:#EEF2F6}
 #esq{display:block;width:100%;height:100%;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
@@ -74,6 +78,7 @@ kbd{border:1px solid var(--bd);border-bottom-width:2px;border-radius:4px;padding
 .wall{fill:#8E8A83}
 .slab{fill:url(#pSlab);stroke:#9E9A93;stroke-width:.6}
 .pavement{fill:#B9B3A8}
+.grass{fill:#8DB36B}
 .common{fill:#EEF3F8}
 .private{fill:#FBF6EC}
 .partition{fill:#BDB7AC}

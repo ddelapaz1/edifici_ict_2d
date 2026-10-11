@@ -4,21 +4,26 @@
 'use strict';
 const $ = s => document.querySelector(s);
 const svg = $('#esq'), stage = $('#stage');
-const BOUNDS = {x: -80, y: -330, w: 2560, h: 3410};
-const ZONES = new Set(['rits', 'riti', 'rs_1', 'rs_2', 'rs_3', 'rs_4', ...UNITS.filter(u => 'AB'.includes(u.s)).map(u => 'rtr_' + u.id)]);
+const BOUNDS = VIEW2D.bounds;
+const ZONES = new Set(VIEW2D.zones);
 const S = {view: null, selected: null, related: false, svc: 'all', hist: [], anim: 0};
 const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const drawn = id => !!REG[id];
 
 /* ---------- geometria ---------- */
 const BB = {};
-function bboxOf(id) {
+function bboxOf(id) {                              // caixa a coordenades del món (inclou els grups desplaçats)
   if (BB[id]) return BB[id];
   let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  const W0 = document.getElementById('world').getCTM().inverse();
   for (const n of REG[id] || []) {
     const b = n.getBBox();
     if (!b.width && !b.height) continue;
-    x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y); x2 = Math.max(x2, b.x + b.width); y2 = Math.max(y2, b.y + b.height);
+    const M = W0.multiply(n.getCTM());
+    for (const [x, y] of [[b.x, b.y], [b.x + b.width, b.y + b.height]]) {
+      const px = M.a * x + M.c * y + M.e, py = M.b * x + M.d * y + M.f;
+      x1 = Math.min(x1, px); y1 = Math.min(y1, py); x2 = Math.max(x2, px); y2 = Math.max(y2, py);
+    }
   }
   return BB[id] = isFinite(x1) ? {x: x1, y: y1, w: x2 - x1, h: y2 - y1} : null;
 }
@@ -73,16 +78,7 @@ const overview = () => fit(BOUNDS, 0.01);
 /* zona on cau el centre de la vista (per a la barra d'ubicació) */
 function updateCrumb() {
   const v = S.view, cx = v.x + v.w / 2, cy = v.y + v.h / 2, k = scale();
-  let t = '';
-  if (k < 0.45) t = '<b>Vista general</b> · clica un recinte o un registre per apropar-t\'hi';
-  else if (cy < 700) t = '<b>Coberta</b> · RITS, torreta i antenes';
-  else if (cy > TOP(0) - 10) t = '<b>Planta baixa</b> · RITI i enllaç inferior';
-  else {
-    const f = 4 - Math.floor((cy - 700) / 440);
-    const zone = cx < 814 ? `habitatge ${ORD[f]} A (zona privada)` : cx > 1586 ? `habitatge ${ORD[f]} B (zona privada)` : 'distribuïdor (zona comuna)';
-    t = `<b>${FLOORNAME(f)}</b> · ${zone}`;
-  }
-  $('#crumb').innerHTML = t;
+  $('#crumb').innerHTML = k < 0.45 ? '<b>Vista general</b> · clica un recinte o un registre per apropar-t\'hi' : VIEW2D.crumb(cx, cy);
   document.querySelectorAll('.zones button').forEach(b => b.classList.toggle('on', b.dataset.zone === 'general' && k < 0.45));
 }
 
@@ -156,28 +152,15 @@ function elData(id) { const e = EL[id]; return Object.assign({}, e, (e.vt || {})
 function chip(id) {
   const e = EL[id]; if (!e) return '';
   let t = e.name.split(' — ')[0]; if (e.sigla && !t.includes('(' + e.sigla)) t += ` (${e.sigla})`;
-  if (e.unit && !e.parent) t += ` · ${UNIT(e.unit).name}`;
+  if (e.unit && !e.parent) t += ` · ${unitTitle(UNIT(e.unit))}`;
   const nd = !drawn(id);
   return `<button class="chip${nd ? ' nd' : ''}" data-goto="${id}" title="${nd ? 'No es dibuixa a l\'esquema 2D' : 'Selecciona i apropa'}">${FAM_ICON[e.fam] || ''} ${esc(t)}</button>`;
 }
 function renderInfo() {
   const box = $('#info'), id = S.selected;
-  if (!id) {
-    box.innerHTML = `<div class="card"><h2>Esquema 2D de la ICT</h2>
-     <p class="small">Secció vertical d'un edifici de quatre plantes. A baix, el <b>RITI</b> amb l'entrada dels operadors; a dalt, el <b>RITS</b> amb la capçalera de RTV i les antenes. A cada planta, el <b>registre secundari</b> del distribuïdor comú i, a banda i banda, un habitatge amb el seu <b>registre de terminació de xarxa</b> (RTR) i la xarxa interior.</p>
-     <p class="small"><b>Clica</b> un recinte o un registre per apropar-t'hi; un cop a dins, clica'n els equips, els cables o els tubs per veure'n la fitxa. També pots fer servir la roda del ratolí (o pessigar), arrossegar, <kbd>+</kbd> <kbd>−</kbd>, <kbd>0</kbd> (vista general) i <kbd>Esc</kbd>.</p>
-     <div class="zonebtns">
-      <button data-goto="rits">▣ RITS (coberta)</button><button data-goto="riti">▣ RITI (planta baixa)</button>
-      <button data-goto="rs_3">▣ Registre secundari</button><button data-goto="rtr_3A">▣ RTR d'un habitatge</button>
-      <button data-goto="capcalera">● Capçalera de RTV</button><button data-goto="canal_principal">◯ Canalització principal</button>
-     </div></div>
-     <div class="card small"><b>Recorregut del senyal</b>
-      <p style="margin:4px 0 0">Antenes → RITS (capçalera) → <span style="color:#C2185B">distribució coaxial</span> → derivadors del registre secundari → <span style="color:#C2185B">dispersió</span> → PAU del RTR → xarxa interior → presa (BAT).</p>
-      <p style="margin:4px 0 0">Operadors → arqueta → PEG → RITI (punts d'interconnexió) → <span style="color:#0AA5C2">fibra</span> i <span style="color:#8D6E1F">parells</span> cap amunt → registre secundari → RTR.</p></div>`;
-    return;
-  }
+  if (!id) { box.innerHTML = VIEW2D.intro; return; }
   const e = elData(id), fam = FAMILIES[e.fam] || {name: ''};
-  const loc = (e.unit ? `Habitatge ${UNIT(e.unit).name} · ` : '') + (e.floor == null ? 'Diverses plantes (tram vertical)' : FLOORNAME(e.floor));
+  const loc = (e.unit ? `${unitTitle(UNIT(e.unit))} · ` : '') + (e.floor == null ? 'Diverses plantes (tram vertical)' : FLOORNAME(e.floor));
   const chainUp = []; let p = e.parent; while (p && EL[p]) { chainUp.push(p); p = EL[p].parent; }
   const rel = relatedOf(id), contains = (e.children || []).filter(x => EL[x] && !(EL[x].variant && EL[x].variant !== 'B'));
   const nets = [...rel].filter(x => EL[x].fam === 'xarxa'), cans = [...rel].filter(x => EL[x].fam === 'canal');
@@ -282,10 +265,7 @@ $('#zback').onclick = goBack;
 document.querySelector('.zones').addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
   const z = b.dataset.zone; pushHist();
-  if (z === 'general') { animateTo(overview()); return; }
-  if (z === 'rits') { animateTo(fit({x: 150, y: -320, w: 1560, h: 1040}, 0.02)); return; }
-  if (z === 'riti') { animateTo(fit({x: -80, y: TOP(0) + 80, w: 1560, h: GROUND + 150 - TOP(0) - 80}, 0.02)); return; }
-  const f = +z; animateTo(fit({x: 150, y: FT(f), w: 2100, h: 440}, 0.02));
+  animateTo(z === 'general' ? overview() : fit(VIEW2D.zone(z), 0.02));
 });
 function applyFilter() {
   svg.querySelectorAll('.dim').forEach(n => n.classList.remove('dim'));
@@ -314,7 +294,7 @@ function showResults() {
   const words = norm(q.value.trim()).split(/\s+/).filter(Boolean);
   if (!words.length) { qres.hidden = true; return; }
   qlist = SEARCH.filter(s => words.every(w => s.t.includes(w))).slice(0, 30); qsel = 0;
-  qres.innerHTML = qlist.length ? qlist.map((s, i) => { const e = EL[s.id]; return `<li role="option" data-i="${i}" aria-selected="${i === qsel}">${esc(e.name)}<small>${esc(e.unit ? 'Habitatge ' + UNIT(e.unit).name : e.floor == null ? 'Vertical' : FLOORNAME(e.floor))}</small></li>`; }).join('') : '<li class="muted">Cap resultat a l\'esquema 2D</li>';
+  qres.innerHTML = qlist.length ? qlist.map((s, i) => { const e = EL[s.id]; return `<li role="option" data-i="${i}" aria-selected="${i === qsel}">${esc(e.name)}<small>${esc(e.unit ? unitTitle(UNIT(e.unit)) : e.floor == null ? 'Vertical' : FLOORNAME(e.floor))}</small></li>`; }).join('') : '<li class="muted">Cap resultat a l\'esquema 2D</li>';
   qres.hidden = false;
 }
 q.addEventListener('input', showResults);
