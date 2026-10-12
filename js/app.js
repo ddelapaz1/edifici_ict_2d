@@ -233,13 +233,13 @@ svg.addEventListener('pointerup', endPtr); svg.addEventListener('pointercancel',
 svg.addEventListener('pointerleave', () => { setHover(null); $('#tip').style.display = 'none'; });
 // roda suau: el zoom s'acumula (en logaritme) i s'aplica a trossos a cada fotograma, al voltant del cursor
 // molla amb esmorteïment crític (WZ.v, velocitat del zoom): arrenca i frena de manera progressiva
-const WZ = {l: 0, v: 0, x: 0, y: 0, id: 0, t: 0, run: false}, WZW = 9;
+const WZ = {l: 0, v: 0, x: 0, y: 0, id: 0, t: 0, run: false}, WZW = 6, WZV = 1.2;   // rigidesa i velocitat màxima (log/s)
 function wheelStep(now) {
   if (WZ.id !== S.anim) { WZ.l = WZ.v = 0; WZ.run = false; return; }   // una altra acció l'ha interromput
   const dt = Math.min((now - WZ.t) / 1000, 0.1); WZ.t = now;
   let p = 0;
   for (let i = 0, n = Math.ceil(dt / 0.004), h = dt / n; i < n; i++) {
-    WZ.v += (WZW * WZW * WZ.l - 2 * WZW * WZ.v) * h; const q = WZ.v * h; WZ.l -= q; p += q;
+    WZ.v += (WZW * WZW * WZ.l - 2 * WZW * WZ.v) * h; WZ.v = Math.max(-WZV, Math.min(WZV, WZ.v)); const q = WZ.v * h; WZ.l -= q; p += q;
   }
   if (Math.abs(WZ.l) < 2e-4 && Math.abs(WZ.v) < 2e-3) { p += WZ.l; WZ.l = WZ.v = 0; }
   const [cx, cy] = toSvg(WZ.x, WZ.y); zoomBy(Math.exp(p), cx, cy);
