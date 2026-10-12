@@ -494,8 +494,8 @@ function drawBAT(g, cx, yy, ty, dbl) {
 /* ---------- habitatge: accés, RTR i xarxa interior ---------- */
 const PRESES2D = {   // posició dels registres de presa: x (costat A) i passadís (b = per terra, t = per sostre)
   rtv_cuina: [728, 'b'], dat_cuina: [766, 'b'], rtv_d2: [480, 'b'], dat_d2: [560, 'b'],
-  dat2_sala: [200, 'b'], tba_sala: [246, 'b'], rtv_sala: [292, 'b'], dat_sala: [342, 'b'], fo_sala: [388, 'b'],
-  rtv_d1: [462, 't'], dat_d1: [512, 't'], dat2_d1: [562, 't'], tba_d1: [606, 't']
+  tba_sala: [246, 'b'], rtv_sala: [292, 'b'], dat_sala: [342, 'b'], fo_sala: [388, 'b'],
+  rtv_d1: [462, 't'], dat_d1: [512, 't'], tba_d1: [606, 't']
 };
 /* accés a l'habitatge de l'edifici: canalització secundària i xarxa de dispersió des del registre secundari */
 function buildAccess(f, s) {
@@ -541,7 +541,7 @@ function buildUnit(f, s, mirror = s === 'B') {
   // PAU de parells: rosetes RJ45 + multiplexor
   const pp = G(rtr, `pau_pt_${U}`); R(pp, X(712), t + 166, X(770), t + 204, 'pau', {rx: 2});
   T(pp, X(741), t + 180, 'PAU parells', 'modtxt', {fs: 5.5, fw: 700}); T(pp, X(741), t + 187, 'roseta + multiplexor', 'modtxt', {fs: 3.6});
-  for (let i = 0; i < 8; i++) port(pp, X(712), t + 169 + i * 4.4, 1.1);
+  for (let i = 0; i < 6; i++) port(pp, X(712), t + 174 + i * 4.4, 1.1);
   // PAU + repartidor de TBA (entrada lliure amb càrrega)
   const pb = G(rtr, `div_tba_${U}`); R(pb, X(724), t + 208, X(770), t + 226, 'pau', {rx: 2});
   T(pb, X(747), t + 219, 'PAU TBA', 'modtxt', {fs: 5, fw: 700});
@@ -576,9 +576,9 @@ function buildUnit(f, s, mirror = s === 'B') {
   const IC = [
     ['xi_rtv', 'coax', [706, 109], 'rtv_cuina'], ['xi_rtv', 'coax', [706, 113], 'rtv_sala'], ['xi_rtv', 'coax', [706, 117], 'rtv_d2'], ['xi_rtv', 'coax', [706, 121], 'rtv_d1'],
     ['xi_fo', 'fo', [720, 151], 'fo_sala'],
-    ['xi_dat', 'pt', [712, 169], 'dat_sala', -4], ['xi_dat', 'pt', [712, 173.4], 'dat_sala', 4], ['xi_dat', 'pt', [712, 177.8], 'dat2_sala'],
-    ['xi_dat', 'pt', [712, 182.2], 'dat_d1', -4], ['xi_dat', 'pt', [712, 186.6], 'dat_d1', 4], ['xi_dat', 'pt', [712, 191], 'dat2_d1'],
-    ['xi_dat', 'pt', [712, 195.4], 'dat_cuina'], ['xi_dat', 'pt', [712, 199.8], 'dat_d2'],
+    ['xi_dat', 'pt', [712, 174], 'dat_sala', -4], ['xi_dat', 'pt', [712, 178.4], 'dat_sala', 4],
+    ['xi_dat', 'pt', [712, 182.8], 'dat_d1', -4], ['xi_dat', 'pt', [712, 187.2], 'dat_d1', 4],
+    ['xi_dat', 'pt', [712, 191.6], 'dat_cuina'], ['xi_dat', 'pt', [712, 196], 'dat_d2'],
     ['xi_tba', 'coax', [724, 212], 'tba_sala'], ['xi_tba', 'coax', [724, 222], 'tba_d1']
   ].map(([net, tech, p, rp, off]) => ({net, tech, p, rp, bx: PRESES2D[rp][0] + (off || 0) * 0.9, c: PRESES2D[rp][1]}));
   // per terra: primer la cuina (cap a la dreta); la resta, de la més propera a la més llunyana
