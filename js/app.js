@@ -232,19 +232,24 @@ function endPtr(ev) {
 svg.addEventListener('pointerup', endPtr); svg.addEventListener('pointercancel', endPtr);
 svg.addEventListener('pointerleave', () => { setHover(null); $('#tip').style.display = 'none'; });
 // roda suau: el zoom s'acumula (en logaritme) i s'aplica a trossos a cada fotograma, al voltant del cursor
-const WZ = {l: 0, x: 0, y: 0, id: 0, t: 0, run: false};
+// molla amb esmorteïment crític (WZ.v, velocitat del zoom): arrenca i frena de manera progressiva
+const WZ = {l: 0, v: 0, x: 0, y: 0, id: 0, t: 0, run: false}, WZW = 9;
 function wheelStep(now) {
-  if (WZ.id !== S.anim) { WZ.l = 0; WZ.run = false; return; }   // una altra acció l'ha interromput
+  if (WZ.id !== S.anim) { WZ.l = WZ.v = 0; WZ.run = false; return; }   // una altra acció l'ha interromput
   const dt = Math.min((now - WZ.t) / 1000, 0.1); WZ.t = now;
-  let p = WZ.l * (1 - Math.exp(-dt * 16)); if (Math.abs(WZ.l - p) < 1e-3) p = WZ.l; WZ.l -= p;
+  let p = 0;
+  for (let i = 0, n = Math.ceil(dt / 0.004), h = dt / n; i < n; i++) {
+    WZ.v += (WZW * WZW * WZ.l - 2 * WZW * WZ.v) * h; const q = WZ.v * h; WZ.l -= q; p += q;
+  }
+  if (Math.abs(WZ.l) < 2e-4 && Math.abs(WZ.v) < 2e-3) { p += WZ.l; WZ.l = WZ.v = 0; }
   const [cx, cy] = toSvg(WZ.x, WZ.y); zoomBy(Math.exp(p), cx, cy);
-  if (WZ.l) requestAnimationFrame(wheelStep); else WZ.run = false;
+  if (WZ.l || WZ.v) requestAnimationFrame(wheelStep); else WZ.run = false;
 }
 svg.addEventListener('wheel', ev => {
   ev.preventDefault();
   const d = ev.deltaMode ? ev.deltaY * 30 : ev.deltaY, l = Math.max(-1, Math.min(1, d * (ev.ctrlKey ? 0.01 : 0.0022)));
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) { S.anim++; const [cx, cy] = toSvg(ev.clientX, ev.clientY); zoomBy(Math.exp(l), cx, cy); return; }
-  if (WZ.id !== S.anim || Math.sign(l) !== Math.sign(WZ.l)) WZ.l = 0;
+  if (WZ.id !== S.anim) WZ.l = WZ.v = 0; else if (Math.sign(l) !== Math.sign(WZ.l)) WZ.l = 0;
   WZ.id = ++S.anim; WZ.l = Math.max(-3, Math.min(3, WZ.l + l)); WZ.x = ev.clientX; WZ.y = ev.clientY;
   if (!WZ.run) { WZ.run = true; WZ.t = performance.now(); requestAnimationFrame(wheelStep); }
 }, {passive: false});
