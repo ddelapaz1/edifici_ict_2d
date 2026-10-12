@@ -231,27 +231,28 @@ function endPtr(ev) {
 }
 svg.addEventListener('pointerup', endPtr); svg.addEventListener('pointercancel', endPtr);
 svg.addEventListener('pointerleave', () => { setHover(null); $('#tip').style.display = 'none'; });
-// roda suau: el zoom s'acumula (en logaritme) i s'aplica a trossos a cada fotograma, al voltant del cursor
-// molla amb esmorteïment crític (WZ.v, velocitat del zoom): arrenca i frena de manera progressiva
-const WZ = {l: 0, v: 0, x: 0, y: 0, id: 0, t: 0, run: false}, WZW = 6, WZV = 1.2;   // rigidesa i velocitat màxima (log/s)
+// roda suau sense memòria: cada pas de la roda es reparteix en una finestra curta (WZT) i la velocitat del zoom
+// el segueix amb un filtre suau (WZF); en deixar de girar la roda, el zoom s'atura en uns 0,2 s
+const WZ = {ev: [], v: 0, x: 0, y: 0, id: 0, t: 0, run: false}, WZT = 0.12, WZF = 0.05, WZV = 2.5;   // s, s, log/s
 function wheelStep(now) {
-  if (WZ.id !== S.anim) { WZ.l = WZ.v = 0; WZ.run = false; return; }   // una altra acció l'ha interromput
+  if (WZ.id !== S.anim) { WZ.ev = []; WZ.v = 0; WZ.run = false; return; }   // una altra acció l'ha interromput
   const dt = Math.min((now - WZ.t) / 1000, 0.1); WZ.t = now;
-  let p = 0;
-  for (let i = 0, n = Math.ceil(dt / 0.004), h = dt / n; i < n; i++) {
-    WZ.v += (WZW * WZW * WZ.l - 2 * WZW * WZ.v) * h; WZ.v = Math.max(-WZV, Math.min(WZV, WZ.v)); const q = WZ.v * h; WZ.l -= q; p += q;
-  }
-  if (Math.abs(WZ.l) < 2e-4 && Math.abs(WZ.v) < 2e-3) { p += WZ.l; WZ.l = WZ.v = 0; }
-  const [cx, cy] = toSvg(WZ.x, WZ.y); zoomBy(Math.exp(p), cx, cy);
-  if (WZ.l || WZ.v) requestAnimationFrame(wheelStep); else WZ.run = false;
+  WZ.ev = WZ.ev.filter(e => now - e[0] < WZT * 1000);
+  const vt = Math.max(-WZV, Math.min(WZV, WZ.ev.reduce((a, e) => a + e[1], 0) / WZT));
+  WZ.v += (vt - WZ.v) * (1 - Math.exp(-dt / WZF));
+  if (!WZ.ev.length && Math.abs(WZ.v) < 0.01) WZ.v = 0;
+  const [cx, cy] = toSvg(WZ.x, WZ.y); zoomBy(Math.exp(WZ.v * dt), cx, cy);
+  if (WZ.ev.length || WZ.v) requestAnimationFrame(wheelStep); else WZ.run = false;
 }
 svg.addEventListener('wheel', ev => {
   ev.preventDefault();
   const d = ev.deltaMode ? ev.deltaY * 30 : ev.deltaY, l = Math.max(-1, Math.min(1, d * (ev.ctrlKey ? 0.01 : 0.0022)));
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) { S.anim++; const [cx, cy] = toSvg(ev.clientX, ev.clientY); zoomBy(Math.exp(l), cx, cy); return; }
-  if (WZ.id !== S.anim) WZ.l = WZ.v = 0; else if (Math.sign(l) !== Math.sign(WZ.l)) WZ.l = 0;
-  WZ.id = ++S.anim; WZ.l = Math.max(-3, Math.min(3, WZ.l + l)); WZ.x = ev.clientX; WZ.y = ev.clientY;
-  if (!WZ.run) { WZ.run = true; WZ.t = performance.now(); requestAnimationFrame(wheelStep); }
+  if (WZ.id !== S.anim) { WZ.ev = []; WZ.v = 0; }
+  WZ.ev = WZ.ev.filter(e => Math.sign(e[1]) === Math.sign(l));   // si canvies de sentit, s'oblida l'anterior
+  const now = performance.now(); WZ.ev.push([now, l]);
+  WZ.id = ++S.anim; WZ.x = ev.clientX; WZ.y = ev.clientY;
+  if (!WZ.run) { WZ.run = true; WZ.t = now; requestAnimationFrame(wheelStep); }
 }, {passive: false});
 svg.addEventListener('dblclick', ev => { ev.preventDefault(); const [cx, cy] = toSvg(ev.clientX, ev.clientY); pushHist(); const v = S.view, f = 0.5; animateTo({x: cx - (cx - v.x) * f, y: cy - (cy - v.y) * f, w: v.w * f, h: v.h * f}, 350); });
 function setHover(id) {
