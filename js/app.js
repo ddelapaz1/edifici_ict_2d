@@ -333,3 +333,19 @@ renderInfo();
 const h = decodeURIComponent(location.hash.slice(1));
 if (h && EL[h]) setTimeout(() => select(h), 50);
 if (new URLSearchParams(location.search).has('debug')) window.__ICT2D = {REG, EL, S, select, bboxOf, setView, pick};
+
+// pantalla completa (pissarra digital)
+(function(){
+  const b=document.getElementById('btnFS'), root=document.documentElement;
+  if(!b || !(root.requestFullscreen || root.webkitRequestFullscreen)) return;
+  const cur=()=>document.fullscreenElement || document.webkitFullscreenElement;
+  const toggle=()=>{ if(cur()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (root.requestFullscreen || root.webkitRequestFullscreen).call(root); };
+  const sync=()=>{ const on=!!cur(); b.classList.toggle('isFS',on);
+    b.setAttribute('aria-label',on?'Surt de la pantalla completa':'Pantalla completa');
+    b.title=on?'Surt de la pantalla completa (F o Esc)':'Pantalla completa (F)'; };
+  b.hidden=false; b.onclick=toggle;
+  document.addEventListener('fullscreenchange',sync); document.addEventListener('webkitfullscreenchange',sync);
+  addEventListener('keydown',e=>{ if((e.key==='f'||e.key==='F') && !e.ctrlKey && !e.metaKey && !e.altKey
+    && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName) && !document.querySelector('dialog[open]')) toggle(); });
+})();

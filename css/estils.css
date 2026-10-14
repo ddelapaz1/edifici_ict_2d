@@ -23,6 +23,9 @@ header h1 small{display:block;font-weight:400;color:var(--tx2);font-size:.75rem}
 #qres li small{color:var(--tx2);display:block}
 .link3d{font-size:.84rem;color:#1A5FB4;text-decoration:none;border:1px solid #BFD3EE;border-radius:8px;padding:6px 10px;white-space:nowrap}
 .link3d:hover{background:var(--blueS)}
+.fsbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;min-width:36px;height:36px;min-height:36px;padding:0;flex-shrink:0;color:#1A5FB4;border-color:#BFD3EE}
+.fsbtn[hidden],.fsbtn .fs-off,.fsbtn.isFS .fs-on{display:none}
+.fsbtn.isFS .fs-off{display:block}
 .seg.model a{display:flex;align-items:center;padding:4px 9px;min-height:34px;text-decoration:none;color:inherit;border-right:1px solid var(--bd);white-space:nowrap;font-size:.84rem;background:var(--bg)}
 .seg.model a:last-child{border-right:0}
 .seg.model a:hover{background:var(--sec)}
@@ -225,6 +228,8 @@ kbd{border:1px solid var(--bd);border-bottom-width:2px;border-radius:4px;padding
  #panel:empty{display:none}
  #legend{display:none}
  .link3d{display:none}
+ header{position:relative;padding-right:52px}
+ .fsbtn{position:absolute;top:6px;right:8px}
 }
 @media (max-width:560px){
  .zones{order:5;width:100%;overflow-x:auto}
